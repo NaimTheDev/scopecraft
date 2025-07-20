@@ -7,33 +7,48 @@ export const generateAndDownloadEstimatePDF = async (
   projectName: string = "Project Estimate"
 ) => {
   try {
-    // Generate the PDF document
-    const doc = (
-      <EstimateDocument estimate={estimate} projectName={projectName} />
+    // Add a timeout to prevent hanging
+    const timeoutPromise = new Promise(
+      (_, reject) =>
+        setTimeout(() => reject(new Error("PDF generation timeout")), 30000) // 30 second timeout
     );
-    const asPdf = pdf(doc);
-    const blob = await asPdf.toBlob();
 
-    // Create download link
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${projectName
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase()}_estimate.pdf`;
+    const pdfPromise = (async () => {
+      // Generate the PDF document
+      const doc = (
+        <EstimateDocument estimate={estimate} projectName={projectName} />
+      );
+      const asPdf = pdf(doc);
+      const blob = await asPdf.toBlob();
 
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${projectName
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase()}_estimate.pdf`;
 
-    // Cleanup
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
 
-    return true;
+      // Cleanup
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      return true;
+    })();
+
+    // Race between PDF generation and timeout
+    return await Promise.race([pdfPromise, timeoutPromise]);
   } catch (error) {
     console.error("Error generating PDF:", error);
-    throw new Error("Failed to generate PDF");
+    throw new Error(
+      `Failed to generate PDF: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 };
 

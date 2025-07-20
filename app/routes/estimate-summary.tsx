@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "@remix-run/react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../utils/firebase.client";
+import { db, auth, createUserDocument } from "../utils/firebase.client";
+import { onAuthStateChanged, signInAnonymously, User } from "firebase/auth";
 import type {
   GeneratedEstimate,
   EstimateBreakdown,
@@ -15,6 +16,8 @@ export default function EstimateSummaryPage() {
   const [searchParams] = useSearchParams();
   const [estimate, setEstimate] = useState<GeneratedEstimate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -22,23 +25,50 @@ export default function EstimateSummaryPage() {
 
   const projectId = searchParams.get("projectId");
 
+  // Authentication effect
   useEffect(() => {
-    if (!projectId) return;
-
-    const fetchEstimate = async () => {
-      const ref = doc(db, "projects", projectId);
-      const snapshot = await getDoc(ref);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        if (data.generatedEstimate) {
-          setEstimate(data.generatedEstimate as GeneratedEstimate);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        // Sign in anonymously if no user is authenticated
+        try {
+          const result = await signInAnonymously(auth);
+          await createUserDocument(result.user);
+          setUser(result.user);
+        } catch (error) {
+          console.error("Anonymous auth failed:", error);
         }
       }
-      setLoading(false);
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!projectId || !user || authLoading) return;
+
+    const fetchEstimate = async () => {
+      try {
+        // Fetch from users/{userId}/projects subcollection
+        const ref = doc(db, "users", user.uid, "projects", projectId);
+        const snapshot = await getDoc(ref);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data.generatedEstimate) {
+            setEstimate(data.generatedEstimate as GeneratedEstimate);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching estimate:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchEstimate();
-  }, [projectId]);
+  }, [projectId, user, authLoading]);
 
   const handleDownloadEstimatePDF = async () => {
     if (!estimate) return;
@@ -71,7 +101,7 @@ export default function EstimateSummaryPage() {
   };
 
   const deleteFeature = async (index: number) => {
-    if (!estimate || !projectId) return;
+    if (!estimate || !projectId || !user) return;
 
     setSaving(true);
     try {
@@ -86,7 +116,7 @@ export default function EstimateSummaryPage() {
       };
 
       // Update in Firestore
-      await updateDoc(doc(db, "projects", projectId), {
+      await updateDoc(doc(db, "users", user.uid, "projects", projectId), {
         generatedEstimate: updatedEstimate,
       });
 
@@ -102,7 +132,13 @@ export default function EstimateSummaryPage() {
   };
 
   const addFeature = async () => {
-    if (!estimate || !projectId || !newFeature.name.trim() || !newFeature.hours)
+    if (
+      !estimate ||
+      !projectId ||
+      !user ||
+      !newFeature.name.trim() ||
+      !newFeature.hours
+    )
       return;
 
     const hours = parseInt(newFeature.hours);
@@ -130,7 +166,7 @@ export default function EstimateSummaryPage() {
       };
 
       // Update in Firestore
-      await updateDoc(doc(db, "projects", projectId), {
+      await updateDoc(doc(db, "users", user.uid, "projects", projectId), {
         generatedEstimate: updatedEstimate,
       });
 
@@ -156,12 +192,14 @@ export default function EstimateSummaryPage() {
     );
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center px-4">
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <div className="animate-pulse text-brand text-lg">
-            🔄 Generating your estimate...
+            {authLoading
+              ? "� Authenticating..."
+              : "🔄 Loading your estimate..."}
           </div>
         </div>
       </div>

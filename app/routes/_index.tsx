@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { auth } from "../utils/firebase.client";
+import { useState, useEffect } from "react";
+import { auth, createUserDocument } from "../utils/firebase.client";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { useNavigate } from "@remix-run/react";
 
@@ -12,8 +13,23 @@ export default function Index() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
 
   const navigate = useNavigate();
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is already signed in, redirect to dashboard
+        navigate("/dashboard");
+      } else {
+        setAuthChecking(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +37,24 @@ export default function Index() {
     setLoading(true);
 
     try {
+      let userCredential;
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
       }
+
+      // Create or update user document
+      await createUserDocument(userCredential.user);
+
       // Reset form
       setEmail("");
       setPassword("");
@@ -45,6 +74,18 @@ export default function Index() {
     setEmail("");
     setPassword("");
   };
+
+  // Show loading spinner while checking authentication
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center px-4">

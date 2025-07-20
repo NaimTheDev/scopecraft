@@ -4,7 +4,8 @@ import type {
 } from "~/stores/useQuestionnaireStore";
 
 export async function generateEstimateWithOpenAI(
-  state: QuestionnaireState
+  state: QuestionnaireState,
+  hourlyRate: number = 100
 ): Promise<GeneratedEstimate> {
   const prompt = `
 You are an expert freelance estimator. Read both the explicit feature list and the client’s description, merge them into one deduplicated set of features, then estimate hours & cost. Return exactly valid JSON matching these TypeScript types (no extra fields, no follow-up questions).
@@ -29,7 +30,7 @@ Timeline: ${state.timeline}
 Budget: ${state.budget}
 Notes: ${state.notes}
 
-HOURLY RATE = 100 USD (use exactly 100)
+HOURLY RATE = ${hourlyRate} USD (use exactly ${hourlyRate})
 
 --- ESTIMATION STEPS ---
 1. FEATURE EXTRACTION & DEDUPLICATION  

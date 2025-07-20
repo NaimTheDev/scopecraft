@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User document rules
+    match /users/{userId} {
+      // Users can read and write their own user document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Projects subcollection under users
+      match /projects/{projectId} {
+        // Users can read, write, create, and delete their own projects
+        allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
+        
+        // TEMPORARY: Allow migration - any authenticated user can create projects in any user's subcollection
+        // TODO: Remove this after migration is complete
+        allow create: if request.auth != null;
+      }
+    }
+
+    // Legacy projects collection - TEMPORARY: Broader permissions for migration
+    // TODO: Remove this entire section after migration is complete
+    match /projects/{projectId} {
+      // Original rules for normal operation
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      
+      // TEMPORARY: Allow any authenticated user to read all projects for migration
+      // TODO: Remove this after migration is complete
+      allow read: if request.auth != null;
+    }
+  }
+}

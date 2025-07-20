@@ -1,6 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { json, type ActionFunction } from "@remix-run/node";
-import { Form, useActionData, useNavigation } from "@remix-run/react";
+import {
+  Form,
+  useActionData,
+  useNavigation,
+  useNavigate,
+} from "@remix-run/react";
+import { onAuthStateChanged, User } from "firebase/auth";
+import {
+  auth,
+  createUserDocument,
+  updateUserHourlyRate,
+  getUserSettings,
+} from "../utils/firebase.client";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { Navigation } from "../components/Navigation";
 
@@ -20,18 +32,75 @@ export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettingsStore();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
+  const navigate = useNavigate();
   const isSubmitting = navigation.formMethod === "POST";
 
   const [hourlyRate, setHourlyRate] = useState(settings.hourlyRate);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const handleSave = () => {
-    updateSettings({ hourlyRate });
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        // Ensure user document exists
+        await createUserDocument(currentUser);
+
+        // Load user settings from Firestore
+        try {
+          const userSettings = await getUserSettings(currentUser);
+          if (userSettings && userSettings.hourlyRate) {
+            setHourlyRate(userSettings.hourlyRate);
+            // Also update the local store to keep it in sync
+            updateSettings({ hourlyRate: userSettings.hourlyRate });
+          }
+        } catch (error) {
+          console.error("Error loading user settings:", error);
+        }
+
+        setUser(currentUser);
+      } else {
+        // Redirect to login if not authenticated
+        navigate("/");
+      }
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [navigate, updateSettings]);
+
+  const handleSave = async () => {
+    try {
+      // Update local store
+      updateSettings({ hourlyRate });
+
+      // Update Firestore document
+      if (user) {
+        await updateUserHourlyRate(user, hourlyRate);
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
+    }
   };
 
   const handleReset = () => {
     resetSettings();
     setHourlyRate(100); // default rate
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect to login
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">

@@ -11,9 +11,10 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     const body = await request.json();
     const state = body as QuestionnaireState;
+    const hourlyRate = body.hourlyRate || 100; // Default to 100 if not provided
 
     // Generate estimate using OpenAI
-    const estimate = await generateEstimateWithOpenAI(state);
+    const estimate = await generateEstimateWithOpenAI(state, hourlyRate);
 
     return json({ success: true, estimate });
   } catch (error) {

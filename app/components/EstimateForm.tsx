@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StepClientRequest from "./StepClientRequest";
 import StepProjectType from "./StepProjectType";
 import StepFeatures from "./StepFeatures";
@@ -9,12 +9,21 @@ import { saveEstimateToFirestore } from "../utils/saveEstimates";
 import { generateEstimate } from "../utils/generateEstimateFromOpenAI";
 import { generateAndDownloadEstimatePDF } from "../utils/generatePDF";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../utils/firebase.client";
+import {
+  db,
+  auth,
+  getUserSettings,
+  createUserDocument,
+} from "../utils/firebase.client";
 import { useNavigate } from "@remix-run/react";
+import { onAuthStateChanged, signInAnonymously, User } from "firebase/auth";
 
 export default function EstimateForm() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [hourlyRate, setHourlyRate] = useState(100); // Default to 100
 
   const steps = [
     <StepClientRequest key="client" />,
@@ -35,29 +44,74 @@ export default function EstimateForm() {
   const navigate = useNavigate();
   const state = useQuestionnaireStore();
 
+  // Load user's hourly rate on component mount
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        try {
+          const userSettings = await getUserSettings(currentUser);
+          if (userSettings && userSettings.hourlyRate) {
+            setHourlyRate(userSettings.hourlyRate);
+          }
+        } catch (error) {
+          console.error("Error loading user hourly rate:", error);
+        }
+      } else {
+        // Sign in anonymously if no user is authenticated
+        try {
+          const result = await signInAnonymously(auth);
+          await createUserDocument(result.user);
+          setUser(result.user);
+        } catch (error) {
+          console.error("Anonymous auth failed:", error);
+        }
+      }
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handleSubmit = async () => {
+    // Ensure user is authenticated before saving
+    if (!user || authLoading) {
+      console.error("User not authenticated or still loading");
+      alert("Please wait for authentication to complete before saving.");
+      return;
+    }
+
     try {
       setLoading(true);
+
       const projectId = await saveEstimateToFirestore(state);
-      console.log("Estimate saved with ID:", projectId);
-      const estimate = await generateEstimate(state);
-      await updateDoc(doc(db, "projects", projectId), {
+
+      const estimate = await generateEstimate(state, hourlyRate);
+      console.log("Step 5: Updating Firestore with generated estimate...");
+      await updateDoc(doc(db, "users", user.uid, "projects", projectId), {
         generatedEstimate: estimate,
       });
 
-      // Generate and download PDF
-      try {
-        const projectName = state.clientRequest || "New Project";
-        await generateAndDownloadEstimatePDF(estimate, projectName);
-      } catch (pdfError) {
-        console.error("PDF generation failed:", pdfError);
-        // Don't block the navigation if PDF fails
-      }
+      // Start PDF generation in the background (non-blocking)
+      const projectName = state.clientRequest || "New Project";
+
+      // Don't await PDF generation - let it happen in background
+      generateAndDownloadEstimatePDF(estimate, projectName)
+        .then(() => {
+          console.log("PDF generated and downloaded successfully");
+        })
+        .catch((pdfError) => {
+          console.error("PDF generation failed:", pdfError);
+        });
 
       navigate(`/estimate-summary?projectId=${projectId}`);
     } catch (err) {
       console.error("Failed to save:", err);
-      alert("Error saving estimate.");
+      alert(
+        `Error saving estimate: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
     } finally {
       setLoading(false);
     }
@@ -73,6 +127,11 @@ export default function EstimateForm() {
           <p className="text-gray-600">
             Step {step + 1} of {steps.length}: {stepTitles[step]}
           </p>
+          {authLoading && (
+            <p className="text-sm text-blue-600 mt-2 animate-pulse">
+              Authenticating...
+            </p>
+          )}
         </div>
 
         {/* Progress Bar */}
@@ -118,10 +177,14 @@ export default function EstimateForm() {
               onClick={() => {
                 handleSubmit();
               }}
-              disabled={loading}
+              disabled={loading || authLoading || !user}
               className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {loading ? "Generating..." : "Generate Estimate"}
+              {loading
+                ? "Generating..."
+                : authLoading
+                ? "Authenticating..."
+                : "Generate Estimate"}
             </button>
           )}
         </div>

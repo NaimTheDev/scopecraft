@@ -5,11 +5,10 @@ import {
   getDocs,
   orderBy,
   query,
-  where,
   Timestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged, signInAnonymously, User } from "firebase/auth";
-import { auth, db } from "../utils/firebase.client";
+import { auth, db, createUserDocument } from "../utils/firebase.client";
 import type { GeneratedEstimate } from "~/stores/useQuestionnaireStore";
 import { Navigation } from "../components/Navigation";
 import { generateAndDownloadProposalPDF } from "../utils/generatePDF";
@@ -36,11 +35,14 @@ export default function Dashboard() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
+        // Create or update user document
+        await createUserDocument(currentUser);
         setUser(currentUser);
       } else {
         // Sign in anonymously if no user is authenticated
         try {
           const result = await signInAnonymously(auth);
+          await createUserDocument(result.user);
           setUser(result.user);
         } catch (error) {
           console.error("Anonymous auth failed:", error);
@@ -57,9 +59,9 @@ export default function Dashboard() {
 
     const fetchProjects = async () => {
       try {
+        // Fetch from users/{userId}/projects subcollection
         const q = query(
-          collection(db, "projects"),
-          where("userId", "==", user.uid),
+          collection(db, "users", user.uid, "projects"),
           orderBy("createdAt", "desc")
         );
         const snapshot = await getDocs(q);

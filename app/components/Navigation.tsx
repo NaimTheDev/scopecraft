@@ -1,4 +1,11 @@
-import { Link, useLocation } from "@remix-run/react";
+import { Link, useLocation, useNavigate } from "@remix-run/react";
+import { useState, useEffect } from "react";
+import { onAuthStateChanged, User } from "firebase/auth";
+import {
+  auth,
+  signOutUser,
+  createUserDocument,
+} from "../utils/firebase.client";
 
 interface NavigationProps {
   className?: string;
@@ -6,6 +13,32 @@ interface NavigationProps {
 
 export function Navigation({ className = "" }: NavigationProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Ensure user document exists
+        await createUserDocument(user);
+      }
+      setUser(user);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOutUser();
+      navigate("/");
+    } catch (error) {
+      console.error("Failed to sign out:", error);
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: "🏠" },
@@ -29,6 +62,18 @@ export function Navigation({ className = "" }: NavigationProps) {
           <span>{item.label}</span>
         </Link>
       ))}
+
+      {/* Sign Out Button */}
+      {user && (
+        <button
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span>🚪</span>
+          <span>{signingOut ? "Signing out..." : "Sign Out"}</span>
+        </button>
+      )}
     </nav>
   );
 }
