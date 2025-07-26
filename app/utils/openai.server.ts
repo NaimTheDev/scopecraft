@@ -5,7 +5,7 @@ import type {
 
 export async function generateEstimateWithOpenAI(
   state: QuestionnaireState,
-  hourlyRate: number = 100
+  hourlyRate: number
 ): Promise<GeneratedEstimate> {
   const prompt = `
 You are an expert freelance estimator. Read both the explicit feature list and the client’s description, merge them into one deduplicated set of features, then estimate hours & cost. Return exactly valid JSON matching these TypeScript types (no extra fields, no follow-up questions).
@@ -65,13 +65,13 @@ HOURLY RATE = ${hourlyRate} USD (use exactly ${hourlyRate})
 5. CALCULATIONS  
    - For each feature:  
      hours = baseline × complexity multiplier  
-     cost = hours × 100  
+     cost = hours × ${hourlyRate}  
    - totalHours = sum(feature hours) + discovery + QA + testing & deployment + contingency  
-   - totalCost = totalHours × 100
+   - totalCost = totalHours × ${hourlyRate}
 
 --- OUTPUT (JSON ONLY) ---
 {
-  "hourlyRate": 100,
+  "hourlyRate": ${hourlyRate},
   "totalHours": <number>,
   "totalCost": <number>,
   "breakdown": [

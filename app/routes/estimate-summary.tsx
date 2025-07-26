@@ -95,8 +95,10 @@ export default function EstimateSummaryPage() {
   };
 
   const recalculateEstimate = (breakdown: EstimateBreakdown[]) => {
+    if (!estimate) return { totalHours: 0, totalCost: 0 };
+    
     const totalHours = breakdown.reduce((sum, item) => sum + item.hours, 0);
-    const totalCost = totalHours * 100; // $100 per hour
+    const totalCost = totalHours * estimate.hourlyRate;
     return { totalHours, totalCost };
   };
 
@@ -152,7 +154,7 @@ export default function EstimateSummaryPage() {
       const newBreakdownItem: EstimateBreakdown = {
         feature: newFeature.name.trim(),
         hours: hours,
-        cost: hours * 100, // $100 per hour
+        cost: hours * estimate.hourlyRate,
       };
 
       const newBreakdown = [...estimate.breakdown, newBreakdownItem];

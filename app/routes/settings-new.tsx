@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { json, type ActionFunction } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
-import { useSettingsStore } from "../stores/useSettingsStore";
+import { useSettingsStore, initializeSettingsAuth } from "../stores/useSettingsStore";
 import { Navigation } from "../components/Navigation";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -17,20 +17,29 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function Settings() {
-  const { settings, updateSettings, resetSettings } = useSettingsStore();
+  const { settings, updateSettings, resetSettings, loading } = useSettingsStore();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.formMethod === "POST";
 
   const [hourlyRate, setHourlyRate] = useState(settings.hourlyRate);
 
-  const handleSave = () => {
-    updateSettings({ hourlyRate });
+  // Initialize settings auth
+  useEffect(() => {
+    initializeSettingsAuth();
+  }, []);
+
+  // Update local hourly rate when settings change
+  useEffect(() => {
+    setHourlyRate(settings.hourlyRate);
+  }, [settings.hourlyRate]);
+
+  const handleSave = async () => {
+    await updateSettings({ hourlyRate });
   };
 
-  const handleReset = () => {
-    resetSettings();
-    setHourlyRate(100); // default rate
+  const handleReset = async () => {
+    await resetSettings();
   };
 
   return (
@@ -90,7 +99,7 @@ export default function Settings() {
                     min="0"
                     step="0.01"
                     className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
-                    placeholder="100.00"
+                    placeholder="Enter hourly rate"
                     value={hourlyRate}
                     onChange={(e) =>
                       setHourlyRate(parseFloat(e.target.value) || 0)
@@ -113,7 +122,7 @@ export default function Settings() {
                 onClick={handleReset}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Reset to Default ($100/hour)
+                Reset to Default
               </button>
 
               <button

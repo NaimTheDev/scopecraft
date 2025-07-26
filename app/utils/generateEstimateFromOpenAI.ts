@@ -5,7 +5,7 @@ import type {
 
 export async function generateEstimate(
   state: QuestionnaireState,
-  hourlyRate?: number
+  hourlyRate: number
 ): Promise<GeneratedEstimate> {
   // Add timeout to prevent hanging
   const controller = new AbortController();
