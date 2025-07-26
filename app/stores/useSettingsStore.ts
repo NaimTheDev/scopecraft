@@ -15,6 +15,8 @@ const defaultSettings: Settings = {
   hourlyRate: 100,
 };
 
+// downside is that it will only save the settings locally
+// in the future I'll just push to firestore
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
