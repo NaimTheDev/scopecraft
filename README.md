@@ -17,7 +17,7 @@ ScopeCraft is a comprehensive project estimation tool designed to help developer
 ## Screenshots
 
 ### Generated Project Estimate PDF
-![image1](image1)
+<img width="472" height="845" alt="Screenshot 2025-07-26 at 1 19 13 PM" src="https://github.com/user-attachments/assets/9d240617-edab-40a4-ad17-4f9a10f7f035">
 
 ### Estimate Summary Interface
 ![image2](image2)
