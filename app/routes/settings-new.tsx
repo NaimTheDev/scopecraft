@@ -17,7 +17,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function Settings() {
-  const { settings, updateSettings, resetSettings, loading } = useSettingsStore();
+  const { settings, updateSettings, resetSettings } = useSettingsStore();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.formMethod === "POST";

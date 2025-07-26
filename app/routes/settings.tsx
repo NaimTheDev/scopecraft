@@ -27,7 +27,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function Settings() {
-  const { settings, updateSettings, resetSettings, loading: settingsLoading, user: storeUser } = useSettingsStore();
+  const { settings, updateSettings, resetSettings, loading: settingsLoading } = useSettingsStore();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const navigate = useNavigate();
