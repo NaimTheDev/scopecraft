@@ -92,9 +92,11 @@ export default function Index() {
       <div className="max-w-md w-full space-y-8">
         {/* Logo or App Name */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">ScopeCraft</h1>
-          <p className="text-gray-600">
-            Welcome to your project scoping companion
+          <h1 className="text-4xl font-extrabold text-brand mb-2 drop-shadow-glow">
+            MyAppCostEstimator.com
+          </h1>
+          <p className="text-gray-700 text-lg font-medium">
+            The modern way to estimate your app costs
           </p>
         </div>
 
@@ -193,8 +195,8 @@ export default function Index() {
         </div>
 
         {/* Footer */}
-        <div className="text-center text-gray-500 text-sm">
-          <p>Streamline your project planning and estimation</p>
+        <div className="text-center text-gray-500 text-sm mt-8">
+          <p>Estimate smarter with MyAppCostEstimator.com</p>
         </div>
       </div>
     </div>

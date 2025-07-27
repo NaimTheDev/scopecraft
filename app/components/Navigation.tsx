@@ -47,33 +47,40 @@ export function Navigation({ className = "" }: NavigationProps) {
   ];
 
   return (
-    <nav className={`flex space-x-4 ${className}`}>
+    <nav
+      className={`flex space-x-4 bg-white/80 shadow-xl rounded-xl px-6 py-3 items-center ${className}`}
+      style={{ backdropFilter: "blur(6px)" }}
+    >
+      <Link
+        to="/"
+        className="text-2xl font-extrabold text-brand drop-shadow-glow tracking-tight mr-6"
+      >
+        MyAppCostEstimator.com
+      </Link>
       {navItems.map((item) => (
         <Link
           key={item.href}
           to={item.href}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+          className={`flex items-center px-3 py-2 rounded-lg font-medium transition-colors hover:bg-brand-light hover:text-brand-dark ${
             location.pathname === item.href
-              ? "bg-blue-600 text-white"
-              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              ? "bg-brand text-white shadow-md"
+              : "text-gray-700"
           }`}
         >
-          <span>{item.icon}</span>
-          <span>{item.label}</span>
+          <span className="mr-2">{item.icon}</span>
+          {item.label}
         </Link>
       ))}
-
-      {/* Sign Out Button */}
-      {user && (
+      <div className="flex-1" />
+      {user ? (
         <button
           onClick={handleSignOut}
+          className="ml-4 px-4 py-2 rounded-lg bg-accent text-white font-semibold shadow hover:bg-accent/90 transition-colors disabled:opacity-60"
           disabled={signingOut}
-          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span>🚪</span>
-          <span>{signingOut ? "Signing out..." : "Sign Out"}</span>
+          {signingOut ? "Signing out..." : "Sign Out"}
         </button>
-      )}
+      ) : null}
     </nav>
   );
 }
