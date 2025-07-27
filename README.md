@@ -1,6 +1,6 @@
-# ScopeCraft
+# MyAppCostEstimator
 
-ScopeCraft is a comprehensive project estimation tool designed to help developers, agencies, and freelancers create accurate project estimates quickly and efficiently. Built with modern web technologies, ScopeCraft streamlines the estimation process from initial client requirements to professional PDF proposals.
+MyAppCostEstimator is a comprehensive project estimation tool designed to help developers, agencies, and freelancers create accurate project estimates quickly and efficiently. Built with modern web technologies, MyAppCostEstimator streamlines the estimation process from initial client requirements to professional PDF proposals.
 
 ## Features
 
@@ -17,15 +17,19 @@ ScopeCraft is a comprehensive project estimation tool designed to help developer
 ## Screenshots
 
 ### Generated Project Estimate PDF
+
 <img width="472" height="845" alt="Screenshot 2025-07-26 at 1 19 13 PM" src="https://github.com/user-attachments/assets/9d240617-edab-40a4-ad17-4f9a10f7f035">
 
 ### Estimate Summary Interface
+
 <img width="540" height="844" alt="Screenshot 2025-07-26 at 1 18 57 PM" src="https://github.com/user-attachments/assets/2ed00a9f-3852-496b-b451-7890600749c2">
 
 ### Feature Selection Interface
+
 <img width="596" height="884" alt="Screenshot 2025-07-26 at 1 17 46 PM" src="https://github.com/user-attachments/assets/a8eb5373-95af-4fc9-9fd5-239d2871be05">
 
 ### Dashboard with Project Estimates
+
 <img width="1328" height="838" alt="Screenshot 2025-07-26 at 1 16 32 PM" src="https://github.com/user-attachments/assets/ae4dab64-c6b3-49be-8312-fc1160f3c929">
 
 ## Tech Stack
@@ -42,18 +46,21 @@ ScopeCraft is a comprehensive project estimation tool designed to help developer
 ## Installation and Setup
 
 1. **Clone the repository**
+
    ```sh
-   git clone https://github.com/NaimTheDev/scopecraft.git
-   cd scopecraft
+   git clone https://github.com/NaimTheDev/MyAppCostEstimator.git
+   cd MyAppCostEstimator
    ```
 
 2. **Install dependencies**
+
    ```sh
    npm install
    ```
 
 3. **Environment Setup**
    Create a `.env` file in the root directory with your Firebase and OpenAI credentials:
+
    ```env
    VITE_FIREBASE_API_KEY=your_firebase_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
@@ -77,7 +84,7 @@ Run the development server:
 npm run dev
 ```
 
-This starts the ScopeCraft development server on `http://localhost:5173` with hot reloading enabled.
+This starts the MyAppCostEstimator development server on `http://localhost:5173` with hot reloading enabled.
 
 ### Available Scripts
 
@@ -116,12 +123,13 @@ npm start
 ```
 
 The built application includes:
+
 - `build/server` - Server-side code
 - `build/client` - Client-side assets
 
 ### Deployment Options
 
-ScopeCraft can be deployed to any Node.js hosting platform:
+MyAppCostEstimator can be deployed to any Node.js hosting platform:
 
 - **Vercel**: Zero-config deployment with automatic builds
 - **Netlify**: JAMstack deployment with serverless functions
@@ -133,7 +141,8 @@ Make sure to set your environment variables in your hosting platform's configura
 
 ## Firebase Configuration
 
-ScopeCraft requires Firebase for:
+MyAppCostEstimator requires Firebase for:
+
 - **Authentication**: User login and anonymous access
 - **Firestore**: Project data storage
 - **Security Rules**: Configure appropriate read/write permissions

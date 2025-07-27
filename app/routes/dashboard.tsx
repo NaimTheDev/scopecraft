@@ -122,7 +122,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-surface-text mb-2">
-            ScopeCraft Dashboard 👋
+            MyAppCostEstimator Dashboard 👋
           </h1>
           <p className="text-gray-600">Manage all your project estimates</p>
         </div>
