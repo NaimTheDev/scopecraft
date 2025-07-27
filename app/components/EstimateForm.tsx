@@ -80,7 +80,7 @@ export default function EstimateForm() {
 
       const projectId = await saveEstimateToFirestore(state);
 
-      const estimate = await generateEstimate(state, settings.hourlyRate);
+      const estimate = await generateEstimate(state, settings.hourlyRate || 100);
       console.log("Step 5: Updating Firestore with generated estimate...");
       await updateDoc(doc(db, "users", user.uid, "projects", projectId), {
         generatedEstimate: estimate,

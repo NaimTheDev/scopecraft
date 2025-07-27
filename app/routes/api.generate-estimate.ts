@@ -14,14 +14,8 @@ export async function action({ request }: ActionFunctionArgs) {
     
     // Get hourly rate from request body (passed from client)
     // The client should pass the user's actual hourly rate from Firestore
-    const hourlyRate = body.hourlyRate;
-    
-    if (!hourlyRate || hourlyRate <= 0) {
-      return json(
-        { error: "Valid hourly rate is required" },
-        { status: 400 }
-      );
-    }
+    // Default to 100 if not provided or invalid
+    const hourlyRate = body.hourlyRate && body.hourlyRate > 0 ? body.hourlyRate : 100;
 
     // Generate estimate using OpenAI
     const estimate = await generateEstimateWithOpenAI(state, hourlyRate);
