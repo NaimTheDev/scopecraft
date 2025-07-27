@@ -5,7 +5,7 @@ import type {
 
 export async function generateEstimateWithOpenAI(
   state: QuestionnaireState,
-  hourlyRate: number = 100
+  hourlyRate: number
 ): Promise<GeneratedEstimate> {
   const prompt = `
 You are an expert freelance estimator using PERT (Program Evaluation and Review Technique) for accurate project estimation. Read both the explicit feature list and the client's description, merge them into one deduplicated set of features, then estimate hours & cost using three-point estimation. Return exactly valid JSON matching these TypeScript types (no extra fields, no follow-up questions).

@@ -10,10 +10,8 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import {
   auth,
   createUserDocument,
-  updateUserHourlyRate,
-  getUserSettings,
 } from "../utils/firebase.client";
-import { useSettingsStore } from "../stores/useSettingsStore";
+import { useSettingsStore, initializeSettingsAuth } from "../stores/useSettingsStore";
 import { Navigation } from "../components/Navigation";
 
 export const action: ActionFunction = async ({ request }) => {
@@ -29,7 +27,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function Settings() {
-  const { settings, updateSettings, resetSettings } = useSettingsStore();
+  const { settings, updateSettings, resetSettings, loading: settingsLoading } = useSettingsStore();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const navigate = useNavigate();
@@ -40,23 +38,12 @@ export default function Settings() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
+    initializeSettingsAuth();
+    
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         // Ensure user document exists
         await createUserDocument(currentUser);
-
-        // Load user settings from Firestore
-        try {
-          const userSettings = await getUserSettings(currentUser);
-          if (userSettings && userSettings.hourlyRate) {
-            setHourlyRate(userSettings.hourlyRate);
-            // Also update the local store to keep it in sync
-            updateSettings({ hourlyRate: userSettings.hourlyRate });
-          }
-        } catch (error) {
-          console.error("Error loading user settings:", error);
-        }
-
         setUser(currentUser);
       } else {
         // Redirect to login if not authenticated
@@ -66,28 +53,30 @@ export default function Settings() {
     });
 
     return () => unsubscribe();
-  }, [navigate, updateSettings]);
+  }, [navigate]);
+
+  // Update local hourly rate when settings change
+  useEffect(() => {
+    setHourlyRate(settings.hourlyRate);
+  }, [settings.hourlyRate]);
 
   const handleSave = async () => {
     try {
-      // Update local store
-      updateSettings({ hourlyRate });
-
-      // Update Firestore document
-      if (user) {
-        await updateUserHourlyRate(user, hourlyRate);
-      }
+      await updateSettings({ hourlyRate });
     } catch (error) {
       console.error("Error saving settings:", error);
     }
   };
 
-  const handleReset = () => {
-    resetSettings();
-    setHourlyRate(100); // default rate
+  const handleReset = async () => {
+    try {
+      await resetSettings();
+    } catch (error) {
+      console.error("Error resetting settings:", error);
+    }
   };
 
-  if (authLoading) {
+  if (authLoading || settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
@@ -161,7 +150,7 @@ export default function Settings() {
                     min="0"
                     step="0.01"
                     className="focus:ring-brand focus:border-brand block w-full pl-7 pr-12 sm:text-sm border-surface-border rounded-md"
-                    placeholder="100.00"
+                    placeholder="Enter hourly rate"
                     value={hourlyRate}
                     onChange={(e) =>
                       setHourlyRate(parseFloat(e.target.value) || 0)
@@ -184,16 +173,16 @@ export default function Settings() {
                 onClick={handleReset}
                 className="inline-flex items-center px-4 py-2 border border-surface-border shadow-sm text-sm font-medium rounded-md text-surface-text bg-surface hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-colors"
               >
-                🔄 Reset to Default ($100/hour)
+                🔄 Reset to Default
               </button>
 
               <button
                 type="button"
                 onClick={handleSave}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-colors"
-                disabled={isSubmitting}
+                disabled={isSubmitting || settingsLoading}
               >
-                {isSubmitting ? "💾 Saving..." : "💾 Save Settings"}
+                {isSubmitting || settingsLoading ? "💾 Saving..." : "💾 Save Settings"}
               </button>
             </div>
           </Form>

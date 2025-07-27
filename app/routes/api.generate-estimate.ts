@@ -11,7 +11,11 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     const body = await request.json();
     const state = body as QuestionnaireState;
-    const hourlyRate = body.hourlyRate || 100; // Default to 100 if not provided
+    
+    // Get hourly rate from request body (passed from client)
+    // The client should pass the user's actual hourly rate from Firestore
+    // Default to 100 if not provided or invalid
+    const hourlyRate = body.hourlyRate && body.hourlyRate > 0 ? body.hourlyRate : 100;
 
     // Generate estimate using OpenAI
     const estimate = await generateEstimateWithOpenAI(state, hourlyRate);

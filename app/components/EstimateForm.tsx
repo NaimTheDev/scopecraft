@@ -12,18 +12,17 @@ import { doc, updateDoc } from "firebase/firestore";
 import {
   db,
   auth,
-  getUserSettings,
   createUserDocument,
 } from "../utils/firebase.client";
 import { useNavigate } from "@remix-run/react";
 import { onAuthStateChanged, signInAnonymously, User } from "firebase/auth";
+import { useSettingsStore, initializeSettingsAuth } from "../stores/useSettingsStore";
 
 export default function EstimateForm() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [hourlyRate, setHourlyRate] = useState(100); // Default to 100
 
   const steps = [
     <StepClientRequest key="client" />,
@@ -43,20 +42,15 @@ export default function EstimateForm() {
 
   const navigate = useNavigate();
   const state = useQuestionnaireStore();
+  const { settings, loading: settingsLoading } = useSettingsStore();
 
-  // Load user's hourly rate on component mount
+  // Initialize settings auth and load user on component mount
   useEffect(() => {
+    initializeSettingsAuth();
+    
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-        try {
-          const userSettings = await getUserSettings(currentUser);
-          if (userSettings && userSettings.hourlyRate) {
-            setHourlyRate(userSettings.hourlyRate);
-          }
-        } catch (error) {
-          console.error("Error loading user hourly rate:", error);
-        }
       } else {
         // Sign in anonymously if no user is authenticated
         try {
@@ -74,10 +68,10 @@ export default function EstimateForm() {
   }, []);
 
   const handleSubmit = async () => {
-    // Ensure user is authenticated before saving
-    if (!user || authLoading) {
-      console.error("User not authenticated or still loading");
-      alert("Please wait for authentication to complete before saving.");
+    // Ensure user is authenticated and settings are loaded before saving
+    if (!user || authLoading || settingsLoading) {
+      console.error("User not authenticated or settings still loading");
+      alert("Please wait for authentication and settings to load before saving.");
       return;
     }
 
@@ -86,7 +80,7 @@ export default function EstimateForm() {
 
       const projectId = await saveEstimateToFirestore(state);
 
-      const estimate = await generateEstimate(state, hourlyRate);
+      const estimate = await generateEstimate(state, settings.hourlyRate || 100);
       console.log("Step 5: Updating Firestore with generated estimate...");
       await updateDoc(doc(db, "users", user.uid, "projects", projectId), {
         generatedEstimate: estimate,

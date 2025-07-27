@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { auth, getUserSettings, updateUserHourlyRate } from "../utils/firebase.client";
+import { onAuthStateChanged, User } from "firebase/auth";
 
 interface Settings {
   hourlyRate: number;
@@ -7,37 +8,112 @@ interface Settings {
 
 interface SettingsStore {
   settings: Settings;
-  updateSettings: (newSettings: Partial<Settings>) => void;
-  resetSettings: () => void;
+  loading: boolean;
+  user: User | null;
+  updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
+  resetSettings: () => Promise<void>;
+  loadUserSettings: () => Promise<void>;
+  setUser: (user: User | null) => void;
 }
 
 const defaultSettings: Settings = {
   hourlyRate: 100,
 };
 
-// downside is that it will only save the settings locally
-// in the future I'll just push to firestore
-export const useSettingsStore = create<SettingsStore>()(
-  persist(
-    (set) => ({
-      settings: defaultSettings,
+export const useSettingsStore = create<SettingsStore>()((set, get) => ({
+  settings: defaultSettings,
+  loading: false,
+  user: null,
 
-      updateSettings: (newSettings: Partial<Settings>) => {
-        set((state) => ({
+  setUser: (user: User | null) => {
+    set({ user });
+  },
+
+  loadUserSettings: async () => {
+    const { user } = get();
+    if (!user) return;
+
+    set({ loading: true });
+    try {
+      const userSettings = await getUserSettings(user);
+      if (userSettings) {
+        set({
           settings: {
-            ...state.settings,
-            ...newSettings,
+            hourlyRate: userSettings.hourlyRate || defaultSettings.hourlyRate,
           },
-        }));
-      },
-
-      resetSettings: () => {
-        set({ settings: defaultSettings });
-      },
-    }),
-    {
-      name: "scopecraft-settings",
-      version: 1,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading user settings:", error);
+    } finally {
+      set({ loading: false });
     }
-  )
-);
+  },
+
+  updateSettings: async (newSettings: Partial<Settings>) => {
+    const { user } = get();
+    if (!user) return;
+
+    set({ loading: true });
+    try {
+      // Update local state immediately for responsive UI
+      set((state) => ({
+        settings: {
+          ...state.settings,
+          ...newSettings,
+        },
+      }));
+
+      // Update Firestore
+      if (newSettings.hourlyRate !== undefined) {
+        await updateUserHourlyRate(user, newSettings.hourlyRate);
+      }
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      // Revert local changes on error
+      await get().loadUserSettings();
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  resetSettings: async () => {
+    const { user } = get();
+    if (!user) return;
+
+    set({ loading: true });
+    try {
+      // Reset to default settings
+      set({ settings: defaultSettings });
+      
+      // Update Firestore with default values
+      await updateUserHourlyRate(user, defaultSettings.hourlyRate);
+    } catch (error) {
+      console.error("Error resetting settings:", error);
+      // Reload from Firestore on error
+      await get().loadUserSettings();
+    } finally {
+      set({ loading: false });
+    }
+  },
+}));
+
+// Initialize auth listener when the store is created
+let authInitialized = false;
+
+export const initializeSettingsAuth = () => {
+  if (authInitialized) return;
+  authInitialized = true;
+
+  onAuthStateChanged(auth, async (user) => {
+    const store = useSettingsStore.getState();
+    store.setUser(user);
+    
+    if (user) {
+      await store.loadUserSettings();
+    } else {
+      // Reset to default when user logs out
+      useSettingsStore.setState({ settings: defaultSettings });
+    }
+  });
+};
