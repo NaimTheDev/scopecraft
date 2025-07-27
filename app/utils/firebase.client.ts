@@ -14,9 +14,9 @@ import {
 // Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyA-M0AhG8V6Hm0rAGgw9yvJIZhSJhz3FOo",
-  authDomain: "scopecraft-864ad.firebaseapp.com",
-  projectId: "scopecraft-864ad",
-  storageBucket: "scopecraft-864ad.firebasestorage.app",
+  authDomain: "myappcostestimator-864ad.firebaseapp.com",
+  projectId: "myappcostestimator-864ad",
+  storageBucket: "myappcostestimator-864ad.firebasestorage.app",
   messagingSenderId: "559021360125",
   appId: "1:559021360125:web:edeb524ba4f2dcdf70cf94",
 };

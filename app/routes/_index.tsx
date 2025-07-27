@@ -92,7 +92,9 @@ export default function Index() {
       <div className="max-w-md w-full space-y-8">
         {/* Logo or App Name */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">ScopeCraft</h1>
+          <h1 className="text-4xl font-extrabold text-primary drop-shadow mb-2">
+            MyAppCostEstimator
+          </h1>
           <p className="text-gray-600">
             Welcome to your project scoping companion
           </p>
