@@ -55,7 +55,7 @@ export function Navigation({ className = "" }: NavigationProps) {
         to="/"
         className="text-2xl font-extrabold text-brand drop-shadow-glow tracking-tight mr-6"
       >
-        MyAppCostEstimator.com
+        AppCostEstimator.com
       </Link>
       {navItems.map((item) => (
         <Link
@@ -75,7 +75,7 @@ export function Navigation({ className = "" }: NavigationProps) {
       {user ? (
         <button
           onClick={handleSignOut}
-          className="ml-4 px-4 py-2 rounded-lg bg-accent text-white font-semibold shadow hover:bg-accent/90 transition-colors disabled:opacity-60"
+          className="ml-4 px-4 py-2 rounded-lg bg-accent text-blue-500 font-semibold shadow hover:bg-accent/90 transition-colors disabled:opacity-60"
           disabled={signingOut}
         >
           {signingOut ? "Signing out..." : "Sign Out"}

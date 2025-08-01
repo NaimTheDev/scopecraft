@@ -122,7 +122,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold text-brand mb-2 drop-shadow-glow">
-            MyAppCostEstimator.com Dashboard 👋
+            Hello {user?.displayName || "there"}👋
           </h1>
           <p className="text-gray-700">Manage all your project estimates</p>
         </div>

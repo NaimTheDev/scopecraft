@@ -1,6 +1,12 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth, signOut, User } from "firebase/auth";
+import {
+  getAuth,
+  signOut,
+  User,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
 import {
   getFirestore,
   doc,
@@ -32,6 +38,20 @@ export const signOutUser = async () => {
     await signOut(auth);
   } catch (error) {
     console.error("Error signing out:", error);
+    throw error;
+  }
+};
+
+// Sign in with Google
+export const signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    await createUserDocument(user);
+    return user;
+  } catch (error) {
+    console.error("Error signing in with Google:", error);
     throw error;
   }
 };
