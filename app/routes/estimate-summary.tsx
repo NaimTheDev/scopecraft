@@ -11,10 +11,17 @@ import {
   generateAndDownloadEstimatePDF,
   generateAndDownloadProposalPDF,
 } from "../utils/generatePDF";
+import {
+  parseBudget,
+  getCumulativeCost,
+  formatCurrency,
+  type BudgetInfo,
+} from "../utils/budgetUtils";
 
 export default function EstimateSummaryPage() {
   const [searchParams] = useSearchParams();
   const [estimate, setEstimate] = useState<GeneratedEstimate | null>(null);
+  const [budgetInfo, setBudgetInfo] = useState<BudgetInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -58,6 +65,11 @@ export default function EstimateSummaryPage() {
           const data = snapshot.data();
           if (data.generatedEstimate) {
             setEstimate(data.generatedEstimate as GeneratedEstimate);
+          }
+          // Parse and set budget information
+          if (data.budget) {
+            const parsedBudget = parseBudget(data.budget);
+            setBudgetInfo(parsedBudget);
           }
         }
       } catch (error) {
@@ -184,6 +196,25 @@ export default function EstimateSummaryPage() {
     }
   };
 
+  // Helper function to determine if an item is over budget based on cumulative cost
+  const isItemOverBudget = (index: number): boolean => {
+    if (!budgetInfo?.range || !estimate) return false;
+    const cumulativeCost = getCumulativeCost(estimate.breakdown, index);
+    return cumulativeCost > budgetInfo.range.max;
+  };
+
+  // Check if the total estimate exceeds the budget
+  const isTotalOverBudget = (): boolean => {
+    if (!budgetInfo?.range || !estimate) return false;
+    return estimate.totalCost > budgetInfo.range.max;
+  };
+
+  // Get the budget overage amount
+  const getBudgetOverage = (): number => {
+    if (!budgetInfo?.range || !estimate) return 0;
+    return Math.max(0, estimate.totalCost - budgetInfo.range.max);
+  };
+
   if (!projectId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center px-4">
@@ -230,6 +261,48 @@ export default function EstimateSummaryPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-8">
+          {/* Budget information and overage banner */}
+          {budgetInfo?.range && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-surface-text">
+                  💰 Budget Information
+                </h3>
+                <span className="text-gray-600">
+                  {budgetInfo.isCustom ? (
+                    `Budget: ${formatCurrency(budgetInfo.range.max)}`
+                  ) : (
+                    `Budget: ${budgetInfo.originalValue}`
+                  )}
+                </span>
+              </div>
+              
+              {isTotalOverBudget() && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <span className="text-red-600 text-xl">⚠️</span>
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-red-800 font-semibold mb-1">
+                        Some items are out of scope for your defined budget
+                      </h4>
+                      <p className="text-red-700 text-sm mb-2">
+                        Your estimate ({formatCurrency(estimate.totalCost)}) exceeds your budget by{" "}
+                        <strong>{formatCurrency(getBudgetOverage())}</strong>.
+                      </p>
+                      <p className="text-red-700 text-sm">
+                        If this doesn&apos;t look right, consider updating the hourly rate in your{" "}
+                        <a href="/settings" className="underline font-medium">settings</a>{" "}
+                        and regenerating the estimate.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-4 mb-6">
             <p className="text-lg">
               <strong className="text-surface-text">Total Hours:</strong>{" "}
@@ -241,9 +314,16 @@ export default function EstimateSummaryPage() {
             </p>
             <p className="text-xl">
               <strong className="text-surface-text">Total Cost:</strong>
-              <span className="text-brand font-bold ml-2">
+              <span className={`font-bold ml-2 ${
+                isTotalOverBudget() ? 'text-red-600' : 'text-brand'
+              }`}>
                 ${estimate.totalCost}
               </span>
+              {budgetInfo?.range && (
+                <span className="text-sm text-gray-600 ml-2">
+                  (Budget: {formatCurrency(budgetInfo.range.max)})
+                </span>
+              )}
             </p>
           </div>
 
@@ -251,29 +331,54 @@ export default function EstimateSummaryPage() {
             🔍 Feature Breakdown
           </h2>
           <div className="space-y-3">
-            {estimate.breakdown.map((item, index) => (
-              <div
-                key={index}
-                className="bg-surface border border-surface-border p-4 rounded-lg flex justify-between items-center hover:shadow-sm transition-shadow"
-              >
-                <div>
-                  <strong className="text-surface-text">{item.feature}</strong>
-                  <div className="text-sm text-gray-600">{item.hours} hrs</div>
+            {estimate.breakdown.map((item, index) => {
+              const isOverBudget = isItemOverBudget(index);
+              const cumulativeCost = getCumulativeCost(estimate.breakdown, index);
+              
+              return (
+                <div
+                  key={index}
+                  className={`bg-surface border p-4 rounded-lg flex justify-between items-center hover:shadow-sm transition-shadow ${
+                    isOverBudget
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-surface-border'
+                  }`}
+                >
+                  <div>
+                    <strong className={`${isOverBudget ? 'text-red-800' : 'text-surface-text'}`}>
+                      {item.feature}
+                    </strong>
+                    <div className={`text-sm ${isOverBudget ? 'text-red-600' : 'text-gray-600'}`}>
+                      {item.hours} hrs
+                      {budgetInfo?.range && (
+                        <span className="ml-2">
+                          • Running total: {formatCurrency(cumulativeCost)}
+                        </span>
+                      )}
+                    </div>
+                    {isOverBudget && (
+                      <div className="text-xs text-red-600 mt-1">
+                        ⚠️ Exceeds budget
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`font-semibold text-lg ${
+                      isOverBudget ? 'text-red-600' : 'text-brand'
+                    }`}>
+                      ${item.cost}
+                    </span>
+                    <button
+                      onClick={() => setDeleteConfirm(index)}
+                      className="text-red-500 hover:text-red-700 transition-colors p-1"
+                      title="Delete feature"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-brand text-lg">
-                    ${item.cost}
-                  </span>
-                  <button
-                    onClick={() => setDeleteConfirm(index)}
-                    className="text-red-500 hover:text-red-700 transition-colors p-1"
-                    title="Delete feature"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Add Feature Button */}
             <div className="border-2 border-dashed border-surface-border rounded-lg p-4 text-center">
