@@ -292,7 +292,7 @@ export default function EstimateSummaryPage() {
                         <strong>{formatCurrency(getBudgetOverage())}</strong>.
                       </p>
                       <p className="text-red-700 text-sm">
-                        If this doesn't look right, consider updating the hourly rate in your{" "}
+                        If this doesn&apos;t look right, consider updating the hourly rate in your{" "}
                         <a href="/settings" className="underline font-medium">settings</a>{" "}
                         and regenerating the estimate.
                       </p>
