@@ -109,7 +109,7 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-8">
+      <div className="max-w-md w-full space-y-8"> 
         {/* Logo or App Name */}
         <div className="text-center">
           <h1 className="text-4xl font-extrabold text-brand mb-2 drop-shadow-glow">

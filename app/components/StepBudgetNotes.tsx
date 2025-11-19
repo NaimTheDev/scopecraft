@@ -10,7 +10,7 @@ export default function StepBudgetNotes() {
       label: "Professional",
       desc: "Standard features",
     },
-    {
+    { 
       value: "$15,000 - $50,000",
       label: "Enterprise",
       desc: "Full feature set",
