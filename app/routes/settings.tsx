@@ -12,7 +12,7 @@ import {
   createUserDocument,
 } from "../utils/firebase.client";
 import { useSettingsStore, initializeSettingsAuth } from "../stores/useSettingsStore";
-import { Navigation } from "../components/Navigation";
+import { useSpring, animated } from "@react-spring/web";
 
 export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
@@ -76,6 +76,19 @@ export default function Settings() {
     }
   };
 
+  const ready = !authLoading && !settingsLoading;
+  const headerSpring = useSpring({
+    opacity: ready ? 1 : 0,
+    transform: ready ? "translateY(0px)" : "translateY(-12px)",
+    config: { tension: 210, friction: 24 },
+  });
+  const cardSpring = useSpring({
+    opacity: ready ? 1 : 0,
+    transform: ready ? "translateY(0px)" : "translateY(24px)",
+    delay: 150,
+    config: { tension: 190, friction: 28 },
+  });
+
   if (authLoading || settingsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -92,101 +105,132 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Navigation */}
-        <div className="mb-8">
-          <Navigation />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white py-8 text-slate-900">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        <animated.div
+          style={headerSpring}
+          className="bg-white/90 backdrop-blur rounded-3xl shadow-lg px-6 py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <img
+              src="/scopecraft_logo.png"
+              alt="ScopeCraft Logo"
+              className="h-12 w-12 rounded-xl object-contain"
+            />
+            <div>
+              <p className="text-sm text-slate-500">ScopeCraft</p>
+              <p className="text-xl font-semibold">AppCostEstimator.com</p>
+            </div>
+          </div>
+          <nav className="flex flex-wrap gap-3 text-sm font-medium text-slate-500">
+            <a
+              href="/dashboard"
+              className="px-3 py-2 rounded-xl hover:bg-blue-50 hover:text-blue-700 transition-colors"
+            >
+              Dashboard
+            </a>
+            <a
+              href="/new-estimate"
+              className="px-3 py-2 rounded-xl hover:bg-blue-50 hover:text-blue-700 transition-colors"
+            >
+              New Estimate
+            </a>
+            <span className="px-3 py-2 rounded-xl border border-blue-200 text-blue-700 bg-blue-50">
+              Settings
+            </span>
+            <a
+              href="/"
+              className="px-3 py-2 rounded-xl hover:bg-blue-50 hover:text-blue-700 transition-colors"
+            >
+              Sign Out
+            </a>
+          </nav>
+        </animated.div>
 
-        <div className="bg-surface shadow rounded-lg border border-surface-border">
-          <div className="px-6 py-4 border-b border-surface-border">
-            <h1 className="text-2xl font-bold text-surface-text">
-              Settings ⚙️
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
+        <animated.div
+          style={cardSpring}
+          className="bg-white rounded-3xl shadow-xl border border-slate-100"
+        >
+          <div className="px-6 sm:px-10 py-8 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-semibold text-slate-900">Settings</h1>
+              <span role="img" aria-label="gear">
+                ⚙️
+              </span>
+            </div>
+            <p className="mt-2 text-slate-500">
               Configure your hourly rate for project estimates
             </p>
           </div>
 
           {actionData?.message && (
             <div
-              className={`px-6 py-4 border-b border-surface-border ${
+              className={`px-6 sm:px-10 py-4 border-b border-slate-100 ${
                 actionData.success
-                  ? "bg-green-50 border-green-200"
-                  : "bg-red-50 border-red-200"
+                  ? "bg-green-50 border-green-100 text-green-800"
+                  : "bg-red-50 border-red-100 text-red-800"
               }`}
             >
-              <p
-                className={`text-sm ${
-                  actionData.success ? "text-green-800" : "text-red-800"
-                }`}
-              >
-                {actionData.message}
-              </p>
+              <p className="text-sm">{actionData.message}</p>
             </div>
           )}
 
-          <Form method="post">
+          <Form method="post" className="px-6 sm:px-10 py-8 space-y-8">
             <input type="hidden" name="_action" value="save-settings" />
 
-            {/* Hourly Rate */}
-            <div className="px-6 py-6">
-              <div className="max-w-xs">
-                <label
-                  htmlFor="hourlyRate"
-                  className="block text-sm font-medium text-surface-text mb-2"
-                >
-                  💰 Hourly Rate
-                </label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm">$</span>
-                  </div>
-                  <input
-                    type="number"
-                    name="hourlyRate"
-                    id="hourlyRate"
-                    min="0"
-                    step="0.01"
-                    className="focus:ring-brand focus:border-brand block w-full pl-7 pr-12 sm:text-sm border-surface-border rounded-md"
-                    placeholder="Enter hourly rate"
-                    value={hourlyRate}
-                    onChange={(e) =>
-                      setHourlyRate(parseFloat(e.target.value) || 0)
-                    }
-                  />
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                    <span className="text-gray-500 sm:text-sm">/hour</span>
-                  </div>
+            <div className="max-w-md space-y-2">
+              <label
+                htmlFor="hourlyRate"
+                className="text-sm font-medium text-slate-700"
+              >
+                Hourly Rate
+              </label>
+              <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                  $
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
-                  This rate will be used when calculating project estimates
-                </p>
+                <input
+                  type="number"
+                  name="hourlyRate"
+                  id="hourlyRate"
+                  min="0"
+                  step="0.01"
+                  className="w-full rounded-2xl border-0 bg-transparent pl-10 pr-16 py-3 text-base text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="100"
+                  value={hourlyRate}
+                  onChange={(e) =>
+                    setHourlyRate(parseFloat(e.target.value) || 0)
+                  }
+                />
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-500">
+                  / hour
+                </div>
               </div>
+              <p className="text-sm text-slate-500">
+                This rate will be used when calculating project estimates
+              </p>
             </div>
 
-            {/* Action Buttons */}
-            <div className="px-6 py-4 bg-surface flex justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center px-4 py-2 border border-surface-border shadow-sm text-sm font-medium rounded-md text-surface-text bg-surface hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-colors"
+                className="px-6 py-3 rounded-xl border border-blue-200 text-blue-700 bg-white hover:bg-blue-50 transition-colors font-semibold"
               >
-                🔄 Reset to Default
+                Reset to Default
               </button>
 
               <button
                 type="button"
                 onClick={handleSave}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand transition-colors"
+                className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-md shadow-blue-200"
                 disabled={isSubmitting || settingsLoading}
               >
-                {isSubmitting || settingsLoading ? "💾 Saving..." : "💾 Save Settings"}
+                {isSubmitting || settingsLoading ? "Saving..." : "Save Settings"}
               </button>
             </div>
           </Form>
-        </div>
+        </animated.div>
       </div>
     </div>
   );

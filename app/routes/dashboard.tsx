@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@remix-run/react";
 import {
   collection,
@@ -12,6 +12,7 @@ import { auth, db, createUserDocument } from "../utils/firebase.client";
 import type { GeneratedEstimate } from "~/stores/useQuestionnaireStore";
 import { Navigation } from "../components/Navigation";
 import { generateAndDownloadProposalPDF } from "../utils/generatePDF";
+import { useSpring, useTrail, animated } from "@react-spring/web";
 
 interface ProjectData {
   id: string;
@@ -111,136 +112,226 @@ export default function Dashboard() {
     }
   };
 
+  const ready = !authLoading && !loading;
+  const heroSpring = useSpring({
+    opacity: ready ? 1 : 0,
+    transform: ready ? "translateY(0px)" : "translateY(24px)",
+    config: { tension: 190, friction: 26 },
+  });
+  const cardsTrail = useTrail(projects.length || 0, {
+    opacity: ready ? 1 : 0,
+    y: ready ? 0 : 20,
+    from: { opacity: 0, y: 20 },
+    config: { mass: 1, tension: 210, friction: 24 },
+    delay: 200,
+  });
+
+  const summary = useMemo(() => {
+    const totalCost = projects.reduce((sum, project) => {
+      const cost = Number(project.generatedEstimate?.totalCost) || 0;
+      return sum + cost;
+    }, 0);
+    const totalHours = projects.reduce((sum, project) => {
+      const hours = Number(project.generatedEstimate?.totalHours) || 0;
+      return sum + hours;
+    }, 0);
+    return { totalCost, totalHours };
+  }, [projects]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Navigation */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white px-4 py-8 text-slate-900">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="mb-2">
           <Navigation />
         </div>
 
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-brand mb-2 drop-shadow-glow">
-            Hello {user?.displayName || "there"}👋
-          </h1>
-          <p className="text-gray-700">Manage all your project estimates</p>
-        </div>
+        <animated.section
+          style={heroSpring}
+          className="bg-white/80 backdrop-blur rounded-3xl shadow-xl px-6 py-10 sm:px-12"
+        >
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="uppercase text-sm tracking-[0.2em] text-blue-500 mb-2">
+                Dashboard
+              </p>
+              <h1 className="text-3xl sm:text-4xl font-bold">
+                Hello {user?.displayName || "there"}{" "}
+                <span role="img" aria-label="waving hand">
+                  👋
+                </span>
+              </h1>
+              <p className="text-slate-600 mt-2">
+                Keep track of every estimate, revisit details, and send polished
+                proposals in seconds.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={handleNewEstimate}
+                className="bg-brand text-white px-6 py-3 rounded-xl shadow-lg shadow-brand/30 hover:bg-brand-dark transition-colors font-semibold flex items-center justify-center gap-2"
+              >
+                ✨ Create New Estimate
+              </button>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 text-center">
+                <p className="text-xs uppercase tracking-wider text-slate-500">
+                  Active Estimates
+                </p>
+                <p className="text-3xl font-bold text-slate-900">
+                  {projects.length}
+                </p>
+              </div>
+            </div>
+          </div>
 
-        {/* New Estimate Button */}
-        <div className="mb-8 text-center">
-          <button
-            onClick={handleNewEstimate}
-            className="bg-brand text-white px-8 py-4 rounded-lg hover:bg-brand-dark transition-colors shadow-md text-lg font-semibold"
-          >
-            ✨ Create New Estimate
-          </button>
-        </div>
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="bg-blue-50/80 rounded-2xl p-5 border border-blue-100">
+              <p className="text-sm text-blue-700">Total projected cost</p>
+              <p className="text-2xl font-bold text-blue-900">
+                ${summary.totalCost.toLocaleString()}
+              </p>
+            </div>
+            <div className="bg-purple-50/80 rounded-2xl p-5 border border-purple-100">
+              <p className="text-sm text-purple-700">Total hours</p>
+              <p className="text-2xl font-bold text-purple-900">
+                {summary.totalHours.toLocaleString()}h
+              </p>
+            </div>
+          </div>
+        </animated.section>
 
-        {/* Estimates List */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-semibold text-surface-text mb-6">
-            📋 Your Estimates
-          </h2>
+        <section className="bg-white rounded-3xl shadow-lg p-6 sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-semibold">Your Estimates</h2>
+              <p className="text-slate-500">
+                Continue refining scopes or generate proposals instantly.
+              </p>
+            </div>
+          </div>
 
           {authLoading || loading ? (
-            <div className="text-center py-8">
-              <div className="animate-pulse text-brand text-lg">
-                🔄 Loading your estimates...
+            <div className="text-center py-12 text-blue-600">
+              <div className="animate-pulse text-lg font-medium">
+                Loading your workspace...
               </div>
             </div>
           ) : projects.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="bg-surface border border-surface-border rounded-lg p-8">
-                <p className="text-gray-500 text-lg mb-4">
-                  You haven&apos;t created any estimates yet.
-                </p>
-                <button
-                  onClick={handleNewEstimate}
-                  className="bg-brand text-white px-6 py-3 rounded-lg hover:bg-brand-dark transition-colors"
-                >
-                  Create Your First Estimate
-                </button>
-              </div>
+            <div className="text-center py-12">
+              <p className="text-slate-500 mb-4">
+                You haven&apos;t created any estimates yet.
+              </p>
+              <button
+                onClick={handleNewEstimate}
+                className="bg-brand text-white px-5 py-3 rounded-xl hover:bg-brand-dark transition-colors font-semibold"
+              >
+                Create your first estimate
+              </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="bg-surface border border-surface-border rounded-lg p-6 hover:shadow-sm transition-shadow"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-surface-text mb-2">
-                        {project.clientRequest
-                          ? project.clientRequest.slice(0, 100) +
-                            (project.clientRequest.length > 100 ? "..." : "")
-                          : "Untitled Project"}
-                      </h3>
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                        {project.projectType && (
-                          <span>📂 {project.projectType}</span>
-                        )}
-                        {project.timeline && <span>⏰ {project.timeline}</span>}
-                        {project.budget && <span>💰 {project.budget}</span>}
-                        <span>📅 {formatDate(project.createdAt)}</span>
+            <div className="space-y-5">
+              {projects.map((project, index) => {
+                const style = cardsTrail[index];
+                const estimatedCost =
+                  Number(project.generatedEstimate?.totalCost) || 0;
+                const estimatedHours =
+                  Number(project.generatedEstimate?.totalHours) || 0;
+                return (
+                  <animated.div
+                    key={project.id}
+                    style={{
+                      opacity: style.opacity,
+                      transform: style.y.to(
+                        (value) => `translateY(${value}px)`
+                      ),
+                    }}
+                    className="rounded-3xl border border-slate-100 px-5 py-6 shadow-sm hover:shadow-lg transition-shadow bg-slate-50/60"
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-2 flex-1">
+                        <p className="text-sm text-slate-500">
+                          {project.projectType || "General Project"} ·{" "}
+                          {formatDate(project.createdAt)}
+                        </p>
+                        <h3 className="text-xl font-semibold">
+                          {project.clientRequest
+                            ? project.clientRequest.slice(0, 120) +
+                              (project.clientRequest.length > 120 ? "..." : "")
+                            : "Untitled Project"}
+                        </h3>
+                        <div className="flex flex-wrap gap-3 text-sm text-slate-600">
+                          {project.timeline && (
+                            <span className="flex items-center gap-1">
+                              ⏱ {project.timeline}
+                            </span>
+                          )}
+                          {project.budget && (
+                            <span className="flex items-center gap-1">
+                              💰 {project.budget}
+                            </span>
+                          )}
+                          {project.notes && (
+                            <span className="flex items-center gap-1">
+                              📝 {project.notes.slice(0, 60)}
+                            </span>
+                          )}
+                        </div>
                       </div>
+
+                      {project.generatedEstimate && (
+                        <div className="text-right min-w-[140px]">
+                          <p className="text-sm uppercase tracking-wider text-slate-500">
+                            Cost
+                          </p>
+                          <p className="text-3xl font-bold text-blue-600">
+                            ${estimatedCost.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {estimatedHours.toLocaleString()} hours
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    {project.generatedEstimate && (
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-brand">
-                          ${project.generatedEstimate.totalCost}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {project.generatedEstimate.totalHours} hours
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {project.features && project.features.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex flex-wrap gap-2">
-                        {project.features.slice(0, 3).map((feature, index) => (
+                    {project.features && project.features.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {project.features.slice(0, 6).map((feature, idx) => (
                           <span
-                            key={index}
-                            className="bg-brand/10 text-brand px-3 py-1 rounded-full text-xs"
+                            key={idx}
+                            className="px-3 py-1 rounded-full text-xs font-medium bg-white text-slate-700 border border-slate-200"
                           >
                             {feature}
                           </span>
                         ))}
-                        {project.features.length > 3 && (
-                          <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs">
-                            +{project.features.length - 3} more
+                        {project.features.length > 6 && (
+                          <span className="px-3 py-1 rounded-full text-xs bg-slate-200 text-slate-600">
+                            +{project.features.length - 6} more
                           </span>
                         )}
                       </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-3">
-                    <a
-                      href={`/estimate-summary?projectId=${project.id}`}
-                      className="bg-brand text-white px-4 py-2 rounded-md hover:bg-brand-dark transition-colors text-sm"
-                    >
-                      View Details
-                    </a>
-                    {project.generatedEstimate && (
-                      <button
-                        onClick={() => handleCreateProposal(project)}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm"
-                      >
-                        Create Proposal
-                      </button>
                     )}
-                  </div>
-                </div>
-              ))}
+
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <a
+                        href={`/estimate-summary?projectId=${project.id}`}
+                        className="flex-1 text-center border border-blue-500 text-blue-600 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-colors"
+                      >
+                        View Details
+                      </a>
+                      {project.generatedEstimate && (
+                        <button
+                          onClick={() => handleCreateProposal(project)}
+                          className="flex-1 text-center bg-blue-600 text-white font-semibold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+                        >
+                          Create Proposal
+                        </button>
+                      )}
+                    </div>
+                  </animated.div>
+                );
+              })}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
