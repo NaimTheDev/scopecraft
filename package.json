@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",
+    "@react-spring/web": "^10.0.3",
     "@remix-run/node": "^2.16.8",
     "@remix-run/react": "^2.16.8",
     "@remix-run/serve": "^2.16.8",
